@@ -45,6 +45,7 @@ jobs:
         ln -s $PWD ~/quicklisp/local-projects/cffi
         sbcl --non-interactive \
           --load ~/quicklisp/setup.lisp \
+          --eval '(ql:quickload :trivial-features)' \
           --eval '(ql:quickload :cffi-tests)' \
           --eval '(let ((failures (cffi-tests:run-all-cffi-tests))) (sb-ext:exit :code (if failures 1 0)))'
 
@@ -96,5 +97,6 @@ jobs:
         ln -s $PWD/cffi ~/quicklisp/local-projects/cffi
         sbcl --non-interactive \
           --load ~/quicklisp/setup.lisp \
+          --eval '(ql:quickload :trivial-features)' \
           --eval '(ql:quickload :cffi-tests)' \
           --eval '(let ((failures (cffi-tests:run-all-cffi-tests))) (sb-ext:exit :code (if failures 1 0)))'
