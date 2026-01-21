@@ -449,11 +449,12 @@ WITH-POINTER-TO-VECTOR-DATA."
            (func-form (if pointerp
                           `(sb-alien:sap-alien ,function '(* ,alien-fn-type))
                           `(sb-alien:extern-alien ,function ,alien-fn-type)))
+           (alien-funcall-into (find-symbol "ALIEN-FUNCALL-INTO" "SB-ALIEN"))
            (alien-form (if (cffi::structure-by-value-p return-type)
                            `(sb-alien:with-alien ((result ,alien-ret-type))
-                              (sb-alien:alien-funcall-into ,func-form
-                                                           (sb-alien:alien-sap (sb-alien:addr result))
-                                                           ,@syms)
+                              (,alien-funcall-into ,func-form
+                                                   (sb-alien:alien-sap (sb-alien:addr result))
+                                                   ,@syms)
                               (sb-alien:alien-sap (sb-alien:addr result)))
                            `(sb-alien:alien-funcall ,func-form ,@syms))))
       (%translate-objects-ret syms fargs types return-type alien-form)))
