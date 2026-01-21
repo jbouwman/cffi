@@ -42,9 +42,9 @@ jobs:
 
     - name: Run CFFI tests
       run: |
+        ln -s $PWD ~/quicklisp/local-projects/cffi
         sbcl --non-interactive \
           --load ~/quicklisp/setup.lisp \
-          --eval '(pushnew (truename ".") asdf:*central-registry* :test #'\''equal)' \
           --eval '(ql:quickload :cffi-tests)' \
           --eval '(let ((failures (cffi-tests:run-all-cffi-tests))) (sb-ext:exit :code (if failures 1 0)))'
 
@@ -92,10 +92,9 @@ jobs:
           --eval '(quicklisp-quickstart:install)'
 
     - name: Run CFFI tests
-      working-directory: cffi
       run: |
+        ln -s $PWD/cffi ~/quicklisp/local-projects/cffi
         sbcl --non-interactive \
           --load ~/quicklisp/setup.lisp \
-          --eval '(pushnew (truename ".") asdf:*central-registry* :test #'\''equal)' \
           --eval '(ql:quickload :cffi-tests)' \
           --eval '(let ((failures (cffi-tests:run-all-cffi-tests))) (sb-ext:exit :code (if failures 1 0)))'
