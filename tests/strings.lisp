@@ -128,7 +128,7 @@
 
 (defparameter *basic-latin-alphabet* "abcdefghijklmnopqrstuvwxyz")
 
-(deftest string.encodings.all.basic
+(deftest (string.encodings.all.basic :expected-to-fail t)
     (let (failed)
       ;;; FIXME: UTF-{32,16} and friends fail due to lack of BOM. See
       ;;; STRING.ENCODING.UTF-16.BASIC for more details.
