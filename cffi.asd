@@ -70,6 +70,7 @@
      (:file "strings")
      (:file "structures")
      (:file "functions")
+     (:file "cffi-sbcl-fsbv" :if-feature :sbcl)
      (:file "foreign-vars")
      (:file "features")))))
 
