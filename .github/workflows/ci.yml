@@ -38,15 +38,14 @@ jobs:
         curl -O https://beta.quicklisp.org/quicklisp.lisp
         sbcl --non-interactive \
           --load quicklisp.lisp \
-          --eval '(quicklisp-quickstart:install)' \
-          --eval '(ql:add-to-init-file)'
+          --eval '(quicklisp-quickstart:install)'
 
     - name: Run CFFI tests
       run: |
         sbcl --non-interactive \
-          --eval '(require :asdf)' \
+          --load ~/quicklisp/setup.lisp \
           --eval '(pushnew (truename ".") asdf:*central-registry* :test #'\''equal)' \
-          --eval '(asdf:load-system :cffi-tests)' \
+          --eval '(ql:quickload :cffi-tests)' \
           --eval '(let ((failures (cffi-tests:run-all-cffi-tests))) (sb-ext:exit :code (if failures 1 0)))'
 
   test-sbcl-source:
@@ -90,14 +89,13 @@ jobs:
         curl -O https://beta.quicklisp.org/quicklisp.lisp
         sbcl --non-interactive \
           --load quicklisp.lisp \
-          --eval '(quicklisp-quickstart:install)' \
-          --eval '(ql:add-to-init-file)'
+          --eval '(quicklisp-quickstart:install)'
 
     - name: Run CFFI tests
       working-directory: cffi
       run: |
         sbcl --non-interactive \
-          --eval '(require :asdf)' \
+          --load ~/quicklisp/setup.lisp \
           --eval '(pushnew (truename ".") asdf:*central-registry* :test #'\''equal)' \
-          --eval '(asdf:load-system :cffi-tests)' \
+          --eval '(ql:quickload :cffi-tests)' \
           --eval '(let ((failures (cffi-tests:run-all-cffi-tests))) (sb-ext:exit :code (if failures 1 0)))'

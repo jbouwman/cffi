@@ -457,7 +457,5 @@ WITH-POINTER-TO-VECTOR-DATA."
                               (sb-alien:alien-sap (sb-alien:addr result)))
                            `(sb-alien:alien-funcall ,func-form ,@syms))))
       (%translate-objects-ret syms fargs types return-type alien-form)))
-
-  (setf cffi::*foreign-structures-by-value* 'foreign-funcall-form/fsbv-sbcl)
   )                                     ; alien-funcall-into-available-p
 
