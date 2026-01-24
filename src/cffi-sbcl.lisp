@@ -401,3 +401,60 @@ WITH-POINTER-TO-VECTOR-DATA."
   (declare (ignore library))
   (when-let (address (sb-sys:find-foreign-symbol-address name))
     (sb-sys:int-sap address)))
+
+;;;# Struct-by-Value Support
+;;;
+;;; SBCL with with-alien expansion of struct-valued alien-funcall
+;;; initial values can handle struct-by-value returns without libffi.
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun alien-funcall-into-available-p ()
+    "Check if SBCL supports alien-funcall-into."
+    (and (find-symbol "ALIEN-FUNCALL-INTO" "SB-ALIEN")
+         (fboundp (find-symbol "ALIEN-FUNCALL-INTO" "SB-ALIEN")))))
+
+(when (alien-funcall-into-available-p)
+  (defun %cffi-to-sbcl-alien-type (cffi-type)
+    "Convert a CFFI type to an SBCL alien type specification."
+    (let ((parsed (cffi::ensure-parsed-base-type cffi-type)))
+      (etypecase parsed
+        (cffi::foreign-struct-type
+         `(sb-alien:struct nil
+            ,@(loop for slot in (cffi::slots-in-order parsed)
+                    collect `(,(cffi::slot-name slot)
+                              ,(%cffi-to-sbcl-alien-type (cffi::slot-type slot))))))
+        (cffi::foreign-built-in-type
+         (convert-foreign-type (cffi::type-keyword parsed)))
+        (t
+         (%cffi-to-sbcl-alien-type (cffi::actual-type parsed))))))
+
+  (defun foreign-funcall-form/fsbv-sbcl
+      (function fargs syms types return-type arg-types
+       &optional pointerp (abi :default-abi))
+    "Generate struct-by-value calls using SBCL's native support."
+    (declare (ignore abi))
+    (let* ((ret-type (%cffi-to-sbcl-alien-type return-type))
+           (fn-type `(function ,ret-type
+                               ,@(mapcar #'%cffi-to-sbcl-alien-type arg-types)))
+           (fn-form (if pointerp
+                        `(sb-alien:sap-alien ,function '(* ,fn-type))
+                        `(sb-alien:extern-alien ,function ,fn-type)))
+           (args (loop for sym in syms for type in types
+                       for alien-type = (%cffi-to-sbcl-alien-type type)
+                       collect `(sb-alien:deref
+                                 (sb-alien:sap-alien ,sym (* ,alien-type)))))
+           (call `(sb-alien:alien-funcall ,fn-form ,@args))
+           (form (if (cffi::structure-by-value-p return-type)
+                     `(sb-alien:with-alien ((result ,ret-type ,call))
+                        (sb-alien:alien-sap (sb-alien:addr result)))
+                     call))
+           (wrapped (if (or (eql return-type :void)
+                            (typep (cffi::parse-type return-type)
+                                   'cffi::translatable-foreign-type))
+                        form
+                        `(cffi:mem-ref ,form
+                                       ',(cffi::canonicalize-foreign-type
+                                          return-type)))))
+      (cffi::translate-objects syms fargs types return-type wrapped t)))
+  )
+
