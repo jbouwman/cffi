@@ -58,20 +58,15 @@
   (let ((units-per-second internal-time-units-per-second))
     (/ (* (get-internal-run-time) 1000000) units-per-second)))
 
-(defmacro with-timing ((real-var cpu-var) &body body)
-  "Execute BODY and bind elapsed real time and CPU time (in microseconds) to REAL-VAR and CPU-VAR."
+(defmacro with-timing (&body body)
+  "Execute BODY and return (values real-time-us cpu-time-us)."
   (let ((start-real (gensym "START-REAL"))
-        (start-cpu (gensym "START-CPU"))
-        (end-real (gensym "END-REAL"))
-        (end-cpu (gensym "END-CPU")))
+        (start-cpu (gensym "START-CPU")))
     `(let ((,start-real (get-internal-real-time-us))
            (,start-cpu (get-run-time-us)))
-       (progn ,@body)
-       (let ((,end-real (get-internal-real-time-us))
-             (,end-cpu (get-run-time-us)))
-         (let ((,real-var (- ,end-real ,start-real))
-               (,cpu-var (- ,end-cpu ,start-cpu)))
-           (values ,real-var ,cpu-var))))))
+       ,@body
+       (values (- (get-internal-real-time-us) ,start-real)
+               (- (get-run-time-us) ,start-cpu)))))
 
 ;;; Benchmark result structure
 
@@ -102,8 +97,9 @@ Returns a BENCHMARK-RESULT structure."
         (real-time (gensym "REAL"))
         (cpu-time (gensym "CPU"))
         (start-bytes (gensym "START-BYTES"))
-        (end-bytes (gensym "END-BYTES")))
-    `(progn
+        (end-bytes (gensym "END-BYTES"))
+        (iter-count (gensym "ITER")))
+    `(let ((,iter-count ,iterations))
        ;; Warmup
        (dotimes (,i *warmup-iterations*)
          (declare (ignorable ,i))
@@ -112,18 +108,19 @@ Returns a BENCHMARK-RESULT structure."
        #+sbcl (sb-ext:gc :full t)
        ;; Actual benchmark
        (let ((,start-bytes #+sbcl (sb-ext:get-bytes-consed) #-sbcl 0))
-         (with-timing (,real-time ,cpu-time)
-           (dotimes (,i ,iterations)
-             (declare (ignorable ,i))
-             ,@body))
-         (let ((,end-bytes #+sbcl (sb-ext:get-bytes-consed) #-sbcl 0))
-           (make-benchmark-result
-            :name ,name
-            :iterations ,iterations
-            :real-time-us ,real-time
-            :cpu-time-us ,cpu-time
-            :bytes-consed (- ,end-bytes ,start-bytes)
-            :implementation (if *use-libffi* :libffi :direct)))))))
+         (multiple-value-bind (,real-time ,cpu-time)
+             (with-timing
+               (dotimes (,i ,iter-count)
+                 (declare (ignorable ,i))
+                 ,@body))
+           (let ((,end-bytes #+sbcl (sb-ext:get-bytes-consed) #-sbcl 0))
+             (make-benchmark-result
+              :name ,name
+              :iterations ,iter-count
+              :real-time-us ,real-time
+              :cpu-time-us ,cpu-time
+              :bytes-consed (- ,end-bytes ,start-bytes)
+              :implementation (if *use-libffi* :libffi :direct))))))))
 
 ;;; Result formatting and comparison
 
